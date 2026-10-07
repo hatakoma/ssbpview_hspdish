@@ -1,0 +1,72 @@
+; Based on ssbpLib For HSP, Copyright (c) Web Technology Corp. (MIT).
+; See THIRD_PARTY_NOTICES.md and upstream/LICENSE for notices and changes.
+; HSP 3.7 / HSP3Dish (Windows 32-bit runtime)
+#include "hsp3dish.as"
+#include "ssbp_dish.as"
+
+onerror *failure
+command_line=dir_cmdline
+keys=0 : flipkey=0 : previous_flip=0 : report=""
+screen 0,800,600
+title "ssbpLib for HSP - HSP3Dish sample"
+onexit *finish
+ssbp_init
+ssbp_load "Resources/character_template_comipo/character_template1.ssbp"
+result=SSPlayer_play(0,"character_template1","character_template_3head/stance")
+result=SSPlayer_setPosition(0,400,370)
+result=SSPlayer_setScale(0,1.0,1.0)
+paused=0 : flipped=0 : ticks=0
+maxframe=SSPlayer_getMaxFrame(0)
+if maxframe<=0 : dialog "Animation has no frames." : goto *finish
+
+repeat
+    stick keys,0
+    if keys & 128 : goto *finish
+    if keys & 16 {
+        paused=1-paused
+        if paused : result=SSPlayer_pause(0)
+        if paused=0 : result=SSPlayer_resume(0)
+    }
+    getkey flipkey,70
+    if flipkey & (previous_flip=0) {
+        flipped=1-flipped
+        result=SSPlayer_setFlip(0,flipped,0)
+    }
+    previous_flip=flipkey
+    if paused {
+        frame=SSPlayer_getFrameNo(0)
+        if keys & 1 : frame=(frame+maxframe-1)\maxframe
+        if keys & 4 : frame=(frame+1)\maxframe
+        result=SSPlayer_setFrameNo(0,frame)
+    }
+    result=SSPlayer_update()
+    redraw 0
+    color 224,234,242 : boxf
+    color 192,207,220 : line 0,370,800,370
+    ssbp_draw 0
+    color 30,45,65
+    pos 20,20 : mes "SpriteStudio / ssbpLib / HSP3Dish"
+    pos 20,48 : mes "SPACE: pause   LEFT/RIGHT: step when paused   F: flip   ESC: exit"
+    pos 20,76 : mes "Frame: "+SSPlayer_getFrameNo(0)+" / "+maxframe+"   Pause: "+paused
+    redraw 1
+    ticks++
+    ; Automated runtime smoke check, using the same load/update/draw path.
+    if instr(command_line,0,"--smoke")>=0 & ticks>=120 {
+        notesel report
+        report="PASS: 120 update/draw frames; parts="+SSPlayer_get_partNum(0)
+        notesave "smoke-result.txt"
+        goto *finish
+    }
+    await 16
+loop
+
+*finish
+result=SSPlayer_Delete()
+end
+
+*failure
+report="HSP error="+err+" line="+wparam
+notesel report
+notesave "runtime-error.txt"
+dialog report
+end

@@ -1,0 +1,8 @@
+# HSP build and runtime output
+*.ax
+hsptmp
+obj
+packfile
+start.exe
+smoke-result.txt
+runtime-error.txt
